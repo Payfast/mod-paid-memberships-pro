@@ -313,7 +313,7 @@
 
             $signature = md5( $pfOutput );
 
-            $payfast_url .= '?'.$pfOutput.'&signature='.$signature;
+            $payfast_url .= '?'.$pfOutput.'&signature='.$signature.'&user_agent=Paid Membership Pro 1.8.6';
 
 
             wp_redirect($payfast_url);
