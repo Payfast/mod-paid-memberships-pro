@@ -279,10 +279,10 @@
             }
 
             $data = array(
-                'merchant_id'      => $merchant_id,
+                'merchant_id'   => $merchant_id,
                 'merchant_key'  => $merchant_key,
-                'return_url'        => pmpro_url("confirmation", "?level=" . $order->membership_level->id),
-                'cancel_url'    => '',
+                'return_url'    => pmpro_url("confirmation", "?level=" . $order->membership_level->id),
+                'cancel_url'    => pmpro_url("levels"),
                 'notify_url'    => PMPRO_URL . "/services/payfast_itn_handler.php",
                 'name_first'    => $order->FirstName,
                 'name_last'     => $order->LastName,
