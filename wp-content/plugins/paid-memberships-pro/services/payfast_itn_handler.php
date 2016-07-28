@@ -139,8 +139,11 @@
     {
         ipnlog(  'Verify security signature' );
 
+        $passPhrase = pmpro_getOption( 'payfast_passphrase' );
+        $pfPassPhrase = empty( $passPhrase ) ? null : $passPhrase;
+
         // If signature different, log for debugging
-        if( !pmpro_pfValidSignature( $pfData, $pfParamString ) )
+        if( !pmpro_pfValidSignature( $pfData, $pfParamString, $pfPassPhrase ) )
         {
             $pfError = true;
             $pfErrMsg = PF_ERR_INVALID_SIGNATURE;
@@ -174,12 +177,20 @@
     }
 
     //// Check data against internal order
-    if( !$pfError && !$pfDone )
+    if( !$pfError && !$pfDone && $pfData['payment_status'] == 'COMPLETE' )
     {
-
-        if( !pmpro_pfAmountsEqual( $pfData['amount_gross'], $morder->total) )
+        if ( empty( $pfData['token'] ) || strtotime( $pfData['custom_str1'] ) <= strtotime( gmdate( 'Y-m-d' ). '+ 2 days' ) )
         {
-            ipnlog(  'Amount Returned: '.$pfData['amount_gross']."\n Amount in Cart:".$total );
+            $checkTotal = $morder->total;
+        }
+        if ( !empty( $pfData['token'] ) && strtotime( gmdate( 'Y-m-d' ) ) > strtotime( $pfData['custom_str1'] . '+ 2 days' ) )
+        {
+            $checkTotal = $morder->subtotal;
+        }
+
+        if( !pmpro_pfAmountsEqual( $pfData['amount_gross'], $checkTotal) )
+        {
+            ipnlog(  'Amount Returned: '.$pfData['amount_gross']."\n Amount in Cart:".$checkTotal );
             $pfError = true;
             $pfErrMsg = PF_ERR_AMOUNT_MISMATCH;
         }
@@ -189,46 +200,198 @@
     //// Check status and update order
     if( !$pfError && !$pfDone )
     {
-        ipnlog(  'Check status and update order' );
-
-        $transaction_id = $pfData['pf_payment_id'];
-        $morder = new MemberOrder($pfData['m_payment_id']);
-        $morder->getMembershipLevel();
-        $morder->getUser();
-
-        switch( $pfData['payment_status'] )
+        if ( $pfData['payment_status'] == 'COMPLETE' && !empty( $pfData['token'] ) )
         {
-            case 'COMPLETE':
-                $morder = new MemberOrder($pfData['m_payment_id']);
-                $morder->getMembershipLevel();
-                $morder->getUser();
+            $txn_id = $pfData['m_payment_id'];
+            $subscr_id = $pfData['token'];
+            if ( strtotime( $pfData['custom_str1'] ) <= strtotime( gmdate( 'Y-m-d' ). '+ 2 days' ) )
+            {
+                //if there is no amount1, this membership has a trial, and we need to update membership/etc
+                $amount = $pfData['amount_gross'];
 
-                //update membership
-                if(pmpro_itnChangeMembershipLevel($transaction_id, $morder))
+                if ( true )
                 {
-                    ipnlog("Checkout processed (" . $morder->code . ") success!");
+                    //trial, get the order
+                    $morder = new MemberOrder( $pfData['m_payment_id'] );
+                    $morder->paypal_token = $pfData['token'];
+                    $morder->getMembershipLevel();
+                    $morder->getUser();
+
+                    //no txn_id on these, so let's use the subscr_id
+                    $txn_id = $pfData['m_payment_id'];
+
+                    //update membership
+                    if ( pmpro_itnChangeMembershipLevel( $txn_id, $morder ) )
+                    {
+                        ipnlog( "Checkout processed (" . $morder->code . ") success!" );
+                    }
+                    else
+                    {
+                        ipnlog( "ERROR: Couldn't change level for order (" . $morder->code . ")." );
+                    }
                 }
                 else
                 {
-                    ipnlog("ERROR: Couldn't change level for order (" . $morder->code . ").");
+                    //we're ignoring this. we will get a payment notice from IPN and process that
+                    ipnlog( "Going to wait for the first payment to go through." );
                 }
 
-                break;
+                pmpro_ipnExit();
+            }
 
-            case 'FAILED':
-                ipnlog("ERROR: ITN from PayFast for order (" . $morder->code . ") Failed.");
-                break;
+            //PayFast Standard Subscription Payment
+            if ( strtotime( gmdate( 'Y-m-d' ) ) > strtotime( $pfData['custom_str1'] . '+ 2 days' ) && !empty( $pfData['token'] ) )
+            {
+                $last_subscr_order = new MemberOrder();
 
-            case 'PENDING':
-                ipnlog("ERROR: ITN from PayFast for order (" . $morder->code . ") Pending.");
+                if ($last_subscr_order->getLastMemberOrderBySubscriptionTransactionID($pfData['m_payment_id']))
+                {
+                    $last_subscr_order->paypal_token = $pfData['token'];
+                    //subscription payment, completed or failure?
+                    if ($pfData['payment_status'] == "COMPLETE")
+                    {
+                        pmpro_ipnSaveOrder($pfData['pf_payment_id'], $last_subscr_order);
+                    }
+                    else
+                    {
+                        pmpro_ipnFailedPayment($last_subscr_order);
+                    }
+                }
+                else
+                {
+                    ipnlog("ERROR: Couldn't find last order for this recurring payment (" . $pfData['m_payment_id'] . ").");
+                }
 
-                break;
+                pmpro_ipnExit();
+            }
+            else
+            {
+                    //subscription payment, completed or failure?
+                    if ( $pfData['payment_status'] == "COMPLETE" )
+                    {
+                        ipnlog('hi4');
+                        pmpro_ipnSaveOrder($pfData['m_payment_id'], $last_subscr_order);
+                        ipnlog( 'subscription payment for subscription id: ' . print_r($last_subscr_order,true) );
+                    }
+                    elseif ( $_POST['payment_status'] == "subscription_failed" )
+                    {
+                        pmpro_ipnFailedPayment($last_subscr_order);
+                    }
+                    else
+                    {
+                        ipnlog('Payment status is ' . $_POST['payment_status'] . '.');
+                    }
 
-            default:
-                ipnlog("ERROR: Unknown error for order (" . $morder->code . ").");
-            break;
+                    pmpro_ipnExit();
+            }
         }
     }
+
+if ( $pfData['payment_status'] == 'CANCELLED' )
+{
+    //find last order
+    $last_subscr_order = new MemberOrder();
+    if ( $last_subscr_order->getLastMemberOrderBySubscriptionTransactionID( $pfData['m_payment_id'] ) == false )
+    {
+        ipnlog( "ERROR: Couldn't find this order to cancel (subscription_transaction_id=" . $pfData['m_payment_id'] . ")." );
+
+        pmpro_ipnExit();
+    }
+    else
+    {
+        //found order, let's cancel the membership
+        $user = get_userdata( $last_subscr_order->user_id );
+
+        if ( empty( $user ) || empty( $user->ID ) )
+        {
+            ipnlog( "ERROR: Could not cancel membership. No user attached to order #" . $last_subscr_order->id . " with subscription transaction id = " . $recurring_payment_id . "." );
+        }
+        else
+        {
+            
+            if ( $last_subscr_order->status == "cancelled" )
+            {
+                ipnlog( "We've already processed this cancellation. Probably originated from WP/PMPro. (Order #" . $last_subscr_order->id . ", Subscription Transaction ID #" . $pfData['m_payment_id'] . ")" );
+            }
+            elseif ( ! pmpro_hasMembershipLevel( $last_subsc_order->membership_id, $user->ID ) )
+            {
+                ipnlog( "This user has a different level than the one associated with this order. Their membership was probably changed by an admin or through an upgrade/downgrade. (Order #" . $last_subscr_order->id . ", Subscription Transaction ID #" . $pfData['m_payment_id'] . ")" );
+            }
+            else
+            {
+                //if the initial payment failed, cancel with status error instead of cancelled
+                if ( $initial_payment_status === "Failed" )
+                {
+                    pmpro_changeMembershipLevel( 0, $last_subscr_order->user_id, 'error' );
+                }
+                else
+                {
+                    pmpro_changeMembershipLevel( 0, $last_subscr_order->user_id, 'cancelled' );
+                }
+
+                ipnlog( "Cancelled membership for user with id = " . $last_subscr_order->user_id . ". Subscription transaction id = " . $pfData['m_payment_id'] . "." );
+
+                //send an email to the member
+                $myemail = new PMProEmail();
+                $myemail->sendCancelEmail( $user );
+
+                //send an email to the admin
+                $myemail = new PMProEmail();
+                $myemail->sendCancelAdminEmail( $user, $last_subscr_order->membership_id );
+            }
+        }
+
+        pmpro_ipnExit();
+    }
+}
+
+
+
+
+
+
+        ipnlog(  'Check status and update order' );
+
+        $transaction_id = $pfData['pf_payment_id'];
+        $morder = new MemberOrder( $pfData['m_payment_id' ]);
+        $morder->getMembershipLevel();
+        $morder->getUser();
+
+        if ( empty( $pfData['token'] ) )
+        {
+            switch ($pfData['payment_status']) {
+                case 'COMPLETE':
+                    $morder = new MemberOrder( $pfData['m_payment_id'] );
+                    $morder->getMembershipLevel();
+                    $morder->getUser();
+
+                    //update membership
+                    if ( pmpro_itnChangeMembershipLevel( $transaction_id, $morder ) )
+                    {
+                        ipnlog( "Checkout processed (" . $morder->code . ") success!" );
+                    }
+                    else
+                    {
+                        ipnlog( "ERROR: Couldn't change level for order (" . $morder->code . ")." );
+                    }
+
+                    break;
+
+                case 'FAILED':
+                    ipnlog( "ERROR: ITN from PayFast for order (" . $morder->code . ") Failed." );
+                    break;
+
+                case 'PENDING':
+                    ipnlog( "ERROR: ITN from PayFast for order (" . $morder->code . ") Pending." );
+
+                    break;
+
+                default:
+                    ipnlog( "ERROR: Unknown error for order (" . $morder->code . ")." );
+                    break;
+            }
+        }
+
 
     // If an error occurred
     if( $pfError )
@@ -278,6 +441,7 @@
     */
     function pmpro_itnChangeMembershipLevel($txn_id, &$morder)
     {
+        global $wpdb;
         //filter for level
         $morder->membership_level = apply_filters("pmpro_ipnhandler_level", $morder->membership_level, $morder->user_id);
 
@@ -333,8 +497,8 @@
             //update order status and transaction ids
             $morder->status = "success";
             $morder->payment_transaction_id = $txn_id;
-            if(!empty($_POST['subscr_id']))
-                $morder->subscription_transaction_id = $_POST['subscr_id'];
+            if(!empty($_POST['token']))
+                $morder->subscription_transaction_id = $_POST['m_payment_id'];
             else
                 $morder->subscription_transaction_id = "";
             $morder->saveOrder();
@@ -379,11 +543,158 @@
             $pmproemail = new PMProEmail();
             $pmproemail->sendCheckoutAdminEmail($user, $invoice);
 
+
+
+
+            // cancel order previous PayFast subscription if applicable
+            $oldSub = $wpdb->get_var("SELECT paypal_token FROM $wpdb->pmpro_membership_orders WHERE user_id = '" . $_POST['custom_int1'] . "' AND status = 'cancelled' ORDER BY timestamp DESC LIMIT 1");
+
+            if ( !empty( $oldSub ) && !empty( $_POST['token'] ) )
+            {
+                ipnlog('oldsub: ' . $oldSub);
+                $hashArray = array();
+                $guid = $oldSub;
+                $passphrase = pmpro_getOption( 'payfast_passphrase' );
+
+                $hashArray['id'] = pmpro_getOption( 'payfast_merchant_id' );
+                $hashArray['passphrase'] = $passphrase;
+                $hashArray['timestamp'] = date('Y-m-d').'T'. date('H:i:s');
+
+                $orderedPrehash = $hashArray;
+
+                ksort($orderedPrehash);
+
+                $signature = md5(http_build_query($orderedPrehash));
+
+                $domain = "http://payfast.extapi";
+
+                    // configure curl
+                $url =  $domain .'/subscriptions/'. $guid . '/cancel';
+
+                $ch = curl_init($url);
+                $useragent = 'PayFast Sample PHP Recurring Billing Integration';
+
+                curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
+                curl_setopt( $ch, CURLOPT_HEADER, false );
+                curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+                curl_setopt( $ch, CURLOPT_TIMEOUT, 60 );
+                curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, "PUT");
+                // curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query($payload));
+                curl_setopt( $ch, CURLOPT_VERBOSE, 1 );
+                curl_setopt( $ch, CURLOPT_HTTPHEADER, array(
+                    'version: v1',
+                    'merchant-id: ' . pmpro_getOption( 'payfast_merchant_id' ),
+                    'signature: ' . $signature,
+                    'timestamp: ' . $hashArray['timestamp']
+                ));
+
+                $response = curl_exec( $ch );
+
+                curl_close( $ch );
+            }
+
+
+
+
+
+
             return true;
         }
         else
             return false;
     }
+
+
+
+function pmpro_ipnSaveOrder( $txn_id, $last_order )
+{
+    global $wpdb;
+
+    //check that txn_id has not been previously processed
+    $old_txn = $wpdb->get_var("SELECT payment_transaction_id FROM $wpdb->pmpro_membership_orders WHERE payment_transaction_id = '" . $txn_id . "' LIMIT 1");
+
+    if (empty($old_txn))
+    {
+        //hook for successful subscription payments
+    //    do_action("pmpro_subscription_payment_completed");
+
+        //save order
+        $morder = new MemberOrder();
+        $morder->user_id = $last_order->user_id;
+        $morder->membership_id = $last_order->membership_id;
+        $morder->payment_transaction_id = $txn_id;
+        $morder->subscription_transaction_id = $last_order->subscription_transaction_id;
+        $morder->gateway = $last_order->gateway;
+        $morder->gateway_environment = $last_order->gateway_environment;
+        $morder->paypal_token = $last_order->paypal_token;
+
+        // Payment Status
+        $morder->status = 'success'; // We have confirmed that and thats the reason we are here.
+        // Payment Type.
+        $morder->payment_type = $last_order->payment_type;
+
+        //set amount based on which PayPal type
+        if ($last_order->gateway == "payfast") {
+            $morder->InitialPayment = $_POST['amount_gross'];    //not the initial payment, but the class is expecting that
+            $morder->PaymentAmount = $_POST['amount_gross'];
+        }
+
+        $morder->FirstName = $_POST['name_first'];
+        $morder->LastName = $_POST['name_last'];
+        $morder->Email = $_POST['email_address'];
+
+        //get address info if appropriate
+        if ($last_order->gateway == "payfast") {
+            $morder->Address1 = get_user_meta($last_order->user_id, "pmpro_baddress1", true);
+            $morder->City = get_user_meta($last_order->user_id, "pmpro_bcity", true);
+            $morder->State = get_user_meta($last_order->user_id, "pmpro_bstate", true);
+            $morder->CountryCode = "ZA";
+            $morder->Zip = get_user_meta($last_order->user_id, "pmpro_bzip", true);
+            $morder->PhoneNumber = get_user_meta($last_order->user_id, "pmpro_bphone", true);
+
+            $morder->billing->name = $_POST['name_first'] . " " . $_POST['name_last'];
+            $morder->billing->street = get_user_meta($last_order->user_id, "pmpro_baddress1", true);
+            $morder->billing->city = get_user_meta($last_order->user_id, "pmpro_bcity", true);
+            $morder->billing->state = get_user_meta($last_order->user_id, "pmpro_bstate", true);
+            $morder->billing->zip = get_user_meta($last_order->user_id, "pmpro_bzip", true);
+            $morder->billing->country = get_user_meta($last_order->user_id, "pmpro_bcountry", true);
+            $morder->billing->phone = get_user_meta($last_order->user_id, "pmpro_bphone", true);
+
+            //get CC info that is on file
+            $morder->cardtype = get_user_meta($last_order->user_id, "pmpro_CardType", true);
+            $morder->accountnumber = hideCardNumber(get_user_meta($last_order->user_id, "pmpro_AccountNumber", true), false);
+            $morder->expirationmonth = get_user_meta($last_order->user_id, "pmpro_ExpirationMonth", true);
+            $morder->expirationyear = get_user_meta($last_order->user_id, "pmpro_ExpirationYear", true);
+            $morder->ExpirationDate = $morder->expirationmonth . $morder->expirationyear;
+            $morder->ExpirationDate_YdashM = $morder->expirationyear . "-" . $morder->expirationmonth;
+        }
+
+        //figure out timestamp or default to none (today)
+//        if(!empty($_POST['payment_date']))
+//            $morder->timestamp = strtotime($_POST['payment_date']);
+
+        //save
+        $morder->saveOrder();
+        $morder->getMemberOrderByID($morder->id);
+
+        //email the user their invoice
+        $pmproemail = new PMProEmail();
+        $pmproemail->sendInvoiceEmail(get_userdata($last_order->user_id), $morder);
+
+        do_action( "pmpro_subscription_payment_completed", $morder );
+
+        ipnlog("New order (" . $morder->code . ") created.");
+
+        return true;
+    } else {
+        ipnlog("Duplicate Transaction ID: " . $txn_id);
+        return true;
+    }
+}
+
+
+
+
 
     /**
      * pfGetData
@@ -411,7 +722,7 @@
      *
      * @author Jonathan Smit (PayFast.co.za)
      */
-    function pmpro_pfValidSignature( $pfData = null, &$pfParamString = null )
+    function pmpro_pfValidSignature( $pfData = null, &$pfParamString = null, $passPhrase = null )
     {
         // Dump the submitted variables and calculate security signature
         foreach( $pfData as $key => $val )
@@ -428,7 +739,18 @@
 
         // Remove the last '&' from the parameter string
         $pfParamString = substr( $pfParamString, 0, -1 );
-        $signature = md5( $pfParamString );
+        $environment = pmpro_getOption("gateway_environment");
+
+        if( is_null( $passPhrase ) || "sandbox" === $environment || "beta-sandbox" === $environment )
+        {
+            $tempParamString = $pfParamString;
+        }
+        else
+        {
+            $tempParamString = $pfParamString."&passphrase=".urlencode( $passPhrase );
+        }
+
+        $signature = md5( $tempParamString );
 
         $result = ( $pfData['signature'] == $signature );
 
@@ -451,7 +773,7 @@
         ipnlog(  'Params = '. $pfParamString );
 
         // Use cURL (if available)
-        if( defined( 'PF_CURL' ) )
+        if( /*defined( 'PF_CURL' )*/false )
         {
             // Variable initialization
             $url = 'https://'. $pfHost .'/eng/query/validate';
