@@ -773,7 +773,7 @@ function pmpro_ipnSaveOrder( $txn_id, $last_order )
         ipnlog(  'Params = '. $pfParamString );
 
         // Use cURL (if available)
-        if( /*defined( 'PF_CURL' )*/false )
+        if( defined( 'PF_CURL' ) )
         {
             // Variable initialization
             $url = 'https://'. $pfHost .'/eng/query/validate';
