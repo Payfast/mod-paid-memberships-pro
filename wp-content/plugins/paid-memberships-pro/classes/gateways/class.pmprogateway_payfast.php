@@ -421,7 +421,7 @@
 
                 $signature = md5(http_build_query($orderedPrehash));
 
-                $domain = "http://payfast.extapi";
+                $domain = "https://api.payfast.co.za";
 
                 // configure curl
                 $url = $domain . '/subscriptions/' . $guid . '/cancel';
