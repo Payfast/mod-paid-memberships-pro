@@ -411,7 +411,8 @@
                 $guid = $order->paypal_token;
                 $passphrase = pmpro_getOption('payfast_passphrase');
 
-                $hashArray['id'] = pmpro_getOption('payfast_merchant_id');
+                $hashArray['version'] = 'v1';
+                $hashArray['merchant-id'] = pmpro_getOption('payfast_merchant_id');
                 $hashArray['passphrase'] = $passphrase;
                 $hashArray['timestamp'] = date('Y-m-d') . 'T' . date('H:i:s');
 
