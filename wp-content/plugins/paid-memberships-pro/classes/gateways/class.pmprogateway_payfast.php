@@ -303,7 +303,7 @@
             }
 
             // Add subscription data
-            if ( !empty( $cycles ) && !empty( $frequency ) )
+            if ( !empty( $frequency ) )
             {
             //    $data['m_subscription_id'] = /*$order->getRandomCode()*/$order->code;
                 $data['custom_str1'] = gmdate( 'Y-m-d' );
