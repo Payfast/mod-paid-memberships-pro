@@ -311,7 +311,7 @@
                 $data['billing_date'] = gmdate( 'Y-m-d' );
                 $data['recurring_amount'] = $amount;
                 $data['frequency'] = $frequency;
-                $data['cycles'] = $cycles + 1;
+                $data['cycles'] = $cycles == 0 ? 0 : $cycles + 1;
 
                 if(empty( $order->code ) )
                     $order->code = $order->getRandomCode();
