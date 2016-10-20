@@ -177,8 +177,9 @@
 
             <span id="pmpro_payfast_checkout" <?php if(($gateway != "paypalexpress" && $gateway != "payfast") || !$pmpro_requirebilling) { ?>style="display: none;"<?php } ?>>
                 <input type="hidden" name="submit-checkout" value="1" />
-                <input type="image" value="<?php _e('Check Out with PayFast', 'pmpro');?> &raquo;" src="https://www.payfast.co.za/images/logo/PayFast_Logo_75.png" />
-                <b>NOTE:</b> if changing a subscription it may take a minute or two to reflect. Please also log in to your PayFast account to ensure the old subscription is cancelled.
+                <p><strong>Check Out with</strong></p>
+                <p><input type="image" style="border:1px solid #eee;padding:5px;border-radius:5px;" value="<?php _e('Check Out with PayFast', 'pmpro');?> &raquo;" src="https://www.payfast.co.za/images/logo/PayFast_Logo_75.png" /></p>
+                <strong>NOTE:</strong> if changing a subscription it may take a minute or two to reflect. Please also log in to your PayFast account to ensure the old subscription is cancelled.
             </span>
 
             <?php
