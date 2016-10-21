@@ -593,12 +593,7 @@ if ( $pfData['payment_status'] == 'CANCELLED' )
 //
 //                curl_close( $ch );
 //            }
-
-
-
-
-
-
+            
             return true;
         }
         else
