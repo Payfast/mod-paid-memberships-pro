@@ -549,50 +549,50 @@ if ( $pfData['payment_status'] == 'CANCELLED' )
             // cancel order previous PayFast subscription if applicable
             $oldSub = $wpdb->get_var("SELECT paypal_token FROM $wpdb->pmpro_membership_orders WHERE user_id = '" . $_POST['custom_int1'] . "' AND status = 'cancelled' ORDER BY timestamp DESC LIMIT 1");
 
-            if ( !empty( $oldSub ) && !empty( $_POST['token'] ) )
-            {
-                ipnlog('oldsub: ' . $oldSub);
-                $hashArray = array();
-                $guid = $oldSub;
-                $passphrase = pmpro_getOption( 'payfast_passphrase' );
-
-                $hashArray['version'] = 'v1';
-                $hashArray['merchant-id'] = pmpro_getOption( 'payfast_merchant_id' );
-                $hashArray['passphrase'] = $passphrase;
-                $hashArray['timestamp'] = date('Y-m-d').'T'. date('H:i:s');
-
-                $orderedPrehash = $hashArray;
-
-                ksort($orderedPrehash);
-
-                $signature = md5(http_build_query($orderedPrehash));
-
-                $domain = "https://api.payfast.co.za";
-
-                    // configure curl
-                $url =  $domain .'/subscriptions/'. $guid . '/cancel';
-
-                $ch = curl_init($url);
-                $useragent = 'PayFast Sample PHP Recurring Billing Integration';
-
-                curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
-                curl_setopt( $ch, CURLOPT_HEADER, false );
-                curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-                curl_setopt( $ch, CURLOPT_TIMEOUT, 60 );
-                curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, "PUT");
-                // curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query($payload));
-                curl_setopt( $ch, CURLOPT_VERBOSE, 1 );
-                curl_setopt( $ch, CURLOPT_HTTPHEADER, array(
-                    'version: v1',
-                    'merchant-id: ' . pmpro_getOption( 'payfast_merchant_id' ),
-                    'signature: ' . $signature,
-                    'timestamp: ' . $hashArray['timestamp']
-                ));
-
-                $response = curl_exec( $ch );
-
-                curl_close( $ch );
-            }
+//            if ( !empty( $oldSub ) && !empty( $_POST['token'] ) )
+//            {
+//                ipnlog('oldsub: ' . $oldSub);
+//                $hashArray = array();
+//                $guid = $oldSub;
+//                $passphrase = pmpro_getOption( 'payfast_passphrase' );
+//
+//                $hashArray['version'] = 'v1';
+//                $hashArray['merchant-id'] = pmpro_getOption( 'payfast_merchant_id' );
+//                $hashArray['passphrase'] = $passphrase;
+//                $hashArray['timestamp'] = date('Y-m-d').'T'. date('H:i:s');
+//
+//                $orderedPrehash = $hashArray;
+//
+//                ksort($orderedPrehash);
+//
+//                $signature = md5(http_build_query($orderedPrehash));
+//
+//                $domain = "https://api.payfast.co.za";
+//
+//                    // configure curl
+//                $url =  $domain .'/subscriptions/'. $guid . '/cancel';
+//
+//                $ch = curl_init($url);
+//                $useragent = 'PayFast Sample PHP Recurring Billing Integration';
+//
+//                curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
+//                curl_setopt( $ch, CURLOPT_HEADER, false );
+//                curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+//                curl_setopt( $ch, CURLOPT_TIMEOUT, 60 );
+//                curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, "PUT");
+//                // curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query($payload));
+//                curl_setopt( $ch, CURLOPT_VERBOSE, 1 );
+//                curl_setopt( $ch, CURLOPT_HTTPHEADER, array(
+//                    'version: v1',
+//                    'merchant-id: ' . pmpro_getOption( 'payfast_merchant_id' ),
+//                    'signature: ' . $signature,
+//                    'timestamp: ' . $hashArray['timestamp']
+//                ));
+//
+//                $response = curl_exec( $ch );
+//
+//                curl_close( $ch );
+//            }
 
 
 
