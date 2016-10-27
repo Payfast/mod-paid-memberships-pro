@@ -326,7 +326,15 @@ if ( $pfData['payment_status'] == 'CANCELLED' )
                 }
                 else
                 {
-                    pmpro_changeMembershipLevel( 0, $last_subscr_order->user_id, 'cancelled' );
+                   // pmpro_changeMembershipLevel( 0, $last_subscr_order->user_id, 'cancelled' );
+                    $last_subscr_order->updateStatus( "cancelled" );
+
+                    global $wpdb;
+                    $query = "UPDATE $wpdb->pmpro_memberships_orders SET status = 'cancelled' WHERE subscription_transaction_id = " . $pfData['m_payment_id'];
+                    $wpdb->query($query);
+
+                    $sqlQuery = "UPDATE $wpdb->pmpro_memberships_users SET status = 'cancelled' WHERE user_id = '" . $last_subscr_order->user_id . "' AND membership_id = '" . $last_subscr_order->membership_id . "' AND status = 'active'";
+                    $wpdb->query($sqlQuery); 
                 }
 
                 ipnlog( "Cancelled membership for user with id = " . $last_subscr_order->user_id . ". Subscription transaction id = " . $pfData['m_payment_id'] . "." );
