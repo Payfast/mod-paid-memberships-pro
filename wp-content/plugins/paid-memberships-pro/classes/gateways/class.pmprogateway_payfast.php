@@ -400,14 +400,14 @@
 
         function cancel(&$order)
         {
-            ?>'<script type="text/javascript">alert("If cancelling a subscription, please login/create a PayFast account and ensure the subscription is cancelled"); </script>'<?php
             //payfast profile stuff
             $nvpStr = "";
             $nvpStr .= "&PROFILEID=" . urlencode($order->subscription_transaction_id) . "&ACTION=Cancel&NOTE=" . urlencode("User requested cancel.");
 
             //    $this->httpParsedResponseAr = $this->PPHttpPost('ManageRecurringPaymentsProfileStatus', $nvpStr);
-            if ( !empty( $order->subscription_transaction_id ) )
+            if ( !empty( $order->subscription_transaction_id ) && $order->subscription_transaction_id == $order->payment_transaction_id )
             {
+                ?>'<script type="text/javascript">alert("If cancelling a subscription, please login/create a PayFast account and ensure the subscription is cancelled"); </script>'<?php
                 $hashArray = array();
                 $guid = $order->paypal_token;
                 $passphrase = pmpro_getOption('payfast_passphrase');
