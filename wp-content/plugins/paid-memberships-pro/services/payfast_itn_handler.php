@@ -269,7 +269,6 @@
                     //subscription payment, completed or failure?
                     if ( $pfData['payment_status'] == "COMPLETE" )
                     {
-                        ipnlog('hi4');
                         pmpro_ipnSaveOrder($pfData['m_payment_id'], $last_subscr_order);
                         ipnlog( 'subscription payment for subscription id: ' . print_r($last_subscr_order,true) );
                     }

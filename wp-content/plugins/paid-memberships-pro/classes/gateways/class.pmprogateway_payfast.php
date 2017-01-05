@@ -274,7 +274,7 @@
                 'email_address' => $order->Email,
                 'm_payment_id'  => $order->code,
                 'amount'        => $initial_payment,
-                'item_name'     => substr($order->membership_level->name . " at " . get_bloginfo("name"), 0, 127),
+                'item_name'     => substr($order->membership_level->name . " at " . get_bloginfo("name"), 0, 99),
                 'custom_int1'   => $order->user_id,
                 );
 
