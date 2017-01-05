@@ -1,6 +1,6 @@
 # paid-memberships-pro-1_8
 
-Copyright (c) 2015 PayFast (Pty) Ltd
+Copyright (c) 2017 PayFast (Pty) Ltd
 
 LICENSE:
 
@@ -26,5 +26,8 @@ INTEGRATION INSTRUCTIONS:
 7. Choose “PayFast” from the “Payment Gateway” drop down menu
 8. The PayFast options will then be shown below
 9. Leave everything else as per default and click "Save Changes"
-10. The module is now ready to be tested in sandbox
+10. The module is now ready to be tested in sandbox (note: sandbox does not currently work for subscriptions)
 11. When ready to go live input your PayFast merchant ID and Key (and passphrase if it is set on your PayFast account) and click "Save Changes"
+12. To setup a subscription select ‘Recurring Subscription’. Currently Paid Memberships Pro can only accept monthly and annual subscriptions through PayFast
+    NOTE: If you have auto-renewal settings, this must be set to ‘No. All checkouts will setup recurring billing.’ It is not advisable to set an expiry date with the set expiry date plugin, rather set the cycles to the required number, or manage the subscription from the PayFast account dashboard
+13. Ensure that subscriptions are enabled on the Integration page (under Settings) on your PayFast account
