@@ -303,8 +303,25 @@
                     break;
             }
 
+            //set the recurringDiscount to true by default and change to false only if a non recurring code is used
+            $recurringDiscount = true;
+
+            //check if a discount code is being used
+            if ( !empty ( $order->discount_code ) )
+            {
+                //check to see whether or not it is a recurring discount code
+                if ( isset( $order->TotalBillingCycles ) )
+                {
+                    $recurringDiscount = true; //1
+                }
+                else
+                {
+                    $recurringDiscount = false;
+                }
+            }
+
             // Add subscription data
-            if ( !empty( $frequency ) )
+            if ( !empty( $frequency ) && !empty( $recurringDiscount ) )
             {
             //    $data['m_subscription_id'] = /*$order->getRandomCode()*/$order->code;
                 $data['custom_str1'] = gmdate( 'Y-m-d' );
