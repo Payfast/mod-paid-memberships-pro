@@ -299,7 +299,7 @@
             if ( !empty ( $order->discount_code ) )
             {
                 //check to see whether or not it is a recurring discount code
-                if ( isset( $order->TotalBillingCycles ) )
+                if ( !empty( $order->TotalBillingCycles ) || !empty( $order->BillingFrequency ) )
                 {
                     $recurringDiscount = true; //1
                 }
@@ -310,7 +310,7 @@
             }
 
             // Add subscription data
-            if ( !empty( $frequency ) && !empty( $recurringDiscount ) )
+            if ( !empty( $frequency ) && $recurringDiscount )
             {
             //    $data['m_subscription_id'] = /*$order->getRandomCode()*/$order->code;
                 $data['custom_str1'] = gmdate( 'Y-m-d' );
