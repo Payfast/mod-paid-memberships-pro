@@ -8,7 +8,7 @@ INTEGRATION INSTRUCTIONS:
 3. At this point it is necessary to add 2 lines of code to the  paid-memberships-pro.php file which is in the root directory of the Paid Memberships Pro plugin
  -Open the file in a text editor and on line 84 add the following code:
  require_once(PMPRO_DIR . "/classes/gateways/class.pmprogateway_payfast.php");
- -Go to the end of line 133, push enter to create a new line 118, add the following on 118:
+ -Go to the end of line 133, push enter to create a new line 134, add the following on 134:
  'payfast' => __('PayFast', 'pmpro'),
 4. Log in to the administration console of your website
 5. Select “Memberships” from the menu, and go to “Payment Settings”
