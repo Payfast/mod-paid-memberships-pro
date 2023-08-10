@@ -1,4 +1,4 @@
-# paid-memberships-pro-1_8
+# paid-memberships-pro
 
 INTEGRATION INSTRUCTIONS:
 1. Unzip the module to a temporary location on your computer.
@@ -21,3 +21,5 @@ INTEGRATION INSTRUCTIONS:
 12. To setup a subscription select ‘Recurring Subscription’. Currently Paid Memberships Pro can only accept monthly and annual subscriptions through PayFast
     NOTE: If you have auto-renewal settings, this must be set to ‘No. All checkouts will setup recurring billing.’ It is not advisable to set an expiry date with the set expiry date plugin, rather set the cycles to the required number, or manage the subscription from the PayFast account dashboard
 13. Ensure that subscriptions are enabled on the Integration page (under Settings) on your PayFast account
+
+Please [click here](https://payfast.io/integration/shopping-carts/paid-memberships-pro/) for more information concerning this module.
