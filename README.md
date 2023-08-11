@@ -1,4 +1,4 @@
-# paid-memberships-pro
+# mod-paid-memberships-pro
 
 Installation
 
