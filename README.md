@@ -1,6 +1,7 @@
 # paid-memberships-pro
 
-INTEGRATION INSTRUCTIONS:
+Installation
+
 1. Unzip the module to a temporary location on your computer.
 2. Copy the 'wp-content' folder in the archive to your base WordPress folder
  -This will merge the folders in the PayFast module with your WordPress folders
